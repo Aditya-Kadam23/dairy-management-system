@@ -1,0 +1,109 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+@layer components {
+
+  /* Buttons - Mobile Responsive */
+  .btn-primary {
+    @apply bg-primary-600 text-white px-4 py-2.5 rounded-lg hover:bg-primary-700 transition-colors duration-200 font-medium text-sm sm:text-base;
+    @apply min-h-[44px] sm:min-h-[40px];
+    /* Touch-friendly on mobile */
+  }
+
+  .btn-secondary {
+    @apply bg-gray-200 text-gray-700 px-4 py-2.5 rounded-lg hover:bg-gray-300 transition-colors duration-200 font-medium text-sm sm:text-base;
+    @apply min-h-[44px] sm:min-h-[40px];
+  }
+
+  .btn-danger {
+    @apply bg-red-600 text-white px-4 py-2.5 rounded-lg hover:bg-red-700 transition-colors duration-200 font-medium text-sm sm:text-base;
+    @apply min-h-[44px] sm:min-h-[40px];
+  }
+
+  /* Input Fields - Mobile Optimized */
+  .input-field {
+    @apply w-full px-3 py-2.5 sm:px-4 sm:py-2 border border-gray-300 rounded-lg;
+    @apply focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent;
+    @apply text-base;
+    /* Prevents zoom on iOS */
+    @apply min-h-[44px] sm:min-h-[40px];
+  }
+
+  /* Cards - Responsive Padding */
+  .card {
+    @apply bg-white rounded-lg shadow-md p-4 sm:p-6;
+  }
+
+  /* Tables - Mobile Responsive */
+  .table-auto {
+    @apply w-full min-w-max;
+  }
+
+  .table-auto thead {
+    @apply bg-gray-100;
+  }
+
+  .table-auto th {
+    @apply px-3 py-2.5 sm:px-4 sm:py-3 text-left text-xs sm:text-sm font-semibold text-gray-700;
+    @apply whitespace-nowrap;
+  }
+
+  .table-auto td {
+    @apply px-3 py-2.5 sm:px-4 sm:py-3 text-xs sm:text-sm text-gray-600 border-b border-gray-200;
+  }
+
+  /* Table Container - Horizontal Scroll */
+  .table-container {
+    @apply w-full overflow-x-auto -mx-4 sm:mx-0;
+  }
+
+  /* Loading Spinner */
+  .loading-spinner {
+    @apply inline-block w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin;
+  }
+
+  /* Mobile Stats Card */
+  .stat-card {
+    @apply bg-white rounded-lg shadow-md p-4 sm:p-6;
+    @apply flex flex-col space-y-2;
+  }
+
+  .stat-card-value {
+    @apply text-2xl sm:text-3xl font-bold text-gray-900;
+  }
+
+  .stat-card-label {
+    @apply text-xs sm:text-sm text-gray-600;
+  }
+}
+
+/* Additional Responsive Utilities */
+@layer utilities {
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Touch-friendly spacing */
+  .touch-spacing {
+    @apply space-y-3 sm:space-y-2;
+  }
+
+  /* Responsive text truncation */
+  .mobile-truncate {
+    @apply truncate sm:whitespace-normal;
+  }
+}
