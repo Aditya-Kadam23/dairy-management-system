@@ -58,6 +58,6 @@ employeeSchema.methods.comparePassword = async function (enteredPassword) {
 };
 
 // Index for faster queries
-employeeSchema.index({ mobileNumber: 1 });
+// Index for faster queries
 
 module.exports = mongoose.model('Employee', employeeSchema);
