@@ -13,6 +13,9 @@ connectDB();
 
 const app = express();
 
+// Trust proxy for Render/Vercel
+app.set('trust proxy', 1);
+
 // Body parser middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
