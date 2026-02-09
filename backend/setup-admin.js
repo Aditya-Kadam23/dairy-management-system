@@ -1,54 +1,37 @@
-const http = require('http');
+const axios = require('axios');
 
-const createAdminAccount = () => {
-    const data = JSON.stringify({
+const createAdminAccount = async () => {
+    // Get URL from command line arg or default to localhost
+    const baseURL = process.argv[2] || 'http://localhost:5000';
+    console.log(`Connecting to: ${baseURL}`);
+
+    const adminData = {
         username: 'admin',
         email: 'admin@milksystem.com',
         password: 'admin123'
-    });
-
-    const options = {
-        hostname: 'localhost',
-        port: 5000,
-        path: '/api/auth/register-admin',
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Content-Length': data.length
-        }
     };
 
-    const req = http.request(options, (res) => {
-        let responseData = '';
+    try {
+        const response = await axios.post(`${baseURL}/api/auth/register-admin`, adminData);
 
-        res.on('data', (chunk) => {
-            responseData += chunk;
-        });
-
-        res.on('end', () => {
-            if (res.statusCode === 201 || res.statusCode === 200) {
-                console.log('✅ Admin account created successfully!');
-                console.log('Username: admin');
-                console.log('Password: admin123');
-                console.log('\nYou can now login at http://localhost:5173');
-            } else if (res.statusCode === 400) {
+        if (response.status === 201 || response.status === 200) {
+            console.log('✅ Admin account created successfully!');
+            console.log('Username: admin');
+            console.log('Password: admin123');
+        }
+    } catch (error) {
+        if (error.response) {
+            if (error.response.status === 400) {
                 console.log('⚠️  Admin account already exists');
                 console.log('Username: admin');
                 console.log('Password: admin123');
-                console.log('\nYou can login at http://localhost:5173');
             } else {
-                console.error('❌ Error:', responseData);
+                console.error('❌ Error:', error.response.data.message || error.message);
             }
-        });
-    });
-
-    req.on('error', (error) => {
-        console.error('❌ Error creating admin account:', error.message);
-        console.error('Make sure the backend server is running on port 5000');
-    });
-
-    req.write(data);
-    req.end();
+        } else {
+            console.error('❌ Error connecting to server:', error.message);
+        }
+    }
 };
 
 createAdminAccount();
