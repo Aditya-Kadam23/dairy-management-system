@@ -11,12 +11,6 @@ const consumerAssignmentSchema = new mongoose.Schema({
         ref: 'Consumer',
         required: [true, 'Consumer ID is required']
     },
-    dailyMilkQuota: {
-        type: Number,
-        required: [true, 'Daily milk quota is required'],
-        min: [0, 'Quota cannot be negative'],
-        default: 0
-    },
     assignedDate: {
         type: Date,
         default: Date.now

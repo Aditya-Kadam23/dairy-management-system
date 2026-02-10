@@ -28,6 +28,11 @@ exports.getConsumers = async (req, res, next) => {
             query.isActive = isActive === 'true';
         }
 
+        // Unassigned filter
+        if (req.query.unassigned === 'true') {
+            query.assignedEmployee = null;
+        }
+
         const consumers = await Consumer.find(query)
             .populate('assignedEmployee', 'name mobileNumber')
             .limit(limit * 1)
@@ -78,7 +83,7 @@ exports.getConsumer = async (req, res, next) => {
 // @access  Private/Admin
 exports.createConsumer = async (req, res, next) => {
     try {
-        const { fullName, mobileNumber, address, area, perLiterRate } = req.body;
+        const { fullName, mobileNumber, address, area, perLiterRate, dailyMilkQuota } = req.body;
 
         let rate = perLiterRate;
 
@@ -93,7 +98,8 @@ exports.createConsumer = async (req, res, next) => {
             mobileNumber,
             address,
             area,
-            perLiterRate: rate
+            perLiterRate: rate,
+            dailyMilkQuota: dailyMilkQuota || 0
         });
 
         res.status(201).json({

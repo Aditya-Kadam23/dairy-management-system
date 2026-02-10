@@ -125,7 +125,49 @@ const Billing = () => {
             {/* Consumer Billing Table */}
             {report && report.consumerBilling.length > 0 ? (
                 <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                    <div className="overflow-x-auto">
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-4 p-4 bg-gray-50">
+                        {report.consumerBilling.map((item) => (
+                            <div key={item.consumer._id} className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
+                                <div className="flex justify-between items-start mb-3">
+                                    <div>
+                                        <h4 className="font-semibold text-gray-900 text-lg">
+                                            {item.consumer.fullName}
+                                        </h4>
+                                        <div className="text-sm text-gray-500 mt-1">
+                                            <p>{item.consumer.area}</p>
+                                            <p>{item.consumer.mobileNumber}</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="block font-bold text-xl text-green-600">
+                                            {formatCurrency(item.totalAmount)}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 mb-4 bg-gray-50 p-3 rounded">
+                                    <div>
+                                        <span className="text-xs text-gray-500 uppercase tracking-wider block">Quantity</span>
+                                        <span className="font-medium text-gray-900">{item.totalQuantity.toFixed(2)} L</span>
+                                    </div>
+                                    <div>
+                                        <span className="text-xs text-gray-500 uppercase tracking-wider block">Rate</span>
+                                        <span className="font-medium text-gray-900">₹{item.consumer.perLiterRate}/L</span>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => sendBillingMessage(item.consumer, item.totalQuantity, item.totalAmount)}
+                                    className="w-full btn-primary flex items-center justify-center py-2"
+                                >
+                                    <FiMessageSquare className="mr-2" /> Send Bill via WhatsApp
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+
+                    <div className="table-container hidden md:block">
                         <table className="table-auto">
                             <thead>
                                 <tr>

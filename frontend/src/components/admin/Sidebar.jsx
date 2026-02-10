@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
     FiHome,
@@ -7,21 +7,18 @@ import {
     FiLink,
     FiDroplet,
     FiFileText,
-    FiSettings,
-    FiMenu,
-    FiX
+    FiSettings
 } from 'react-icons/fi';
 
-const Sidebar = () => {
-    const [isOpen, setIsOpen] = useState(false);
+const Sidebar = ({ isOpen, onClose }) => {
 
     const menuItems = [
         { path: '/admin/dashboard', icon: FiHome, label: 'Dashboard' },
+        { path: '/admin/daily-milk', icon: FiDroplet, label: 'Daily Milk' },
+        { path: '/admin/deliveries', icon: FiFileText, label: 'Deliveries' },
         { path: '/admin/consumers', icon: FiUsers, label: 'Consumers' },
         { path: '/admin/employees', icon: FiUserCheck, label: 'Employees' },
         { path: '/admin/assignments', icon: FiLink, label: 'Assignments' },
-        { path: '/admin/daily-milk', icon: FiDroplet, label: 'Daily Milk' },
-        { path: '/admin/deliveries', icon: FiFileText, label: 'Deliveries' },
         { path: '/admin/billing', icon: FiFileText, label: 'Billing' },
         { path: '/admin/settings', icon: FiSettings, label: 'Settings' }
     ];
@@ -33,7 +30,7 @@ const Sidebar = () => {
                 `flex items-center px-4 py-3 text-gray-700 hover:bg-primary-50 hover:text-primary-700 rounded-lg transition-colors ${isActive ? 'bg-primary-50 text-primary-700 font-medium' : ''
                 }`
             }
-            onClick={() => setIsOpen(false)}
+            onClick={onClose}
         >
             <item.icon className="w-5 h-5 mr-3" />
             <span>{item.label}</span>
@@ -42,25 +39,17 @@ const Sidebar = () => {
 
     return (
         <>
-            {/* Mobile Menu Button */}
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white rounded-lg shadow-lg"
-            >
-                {isOpen ? <FiX className="w-6 h-6" /> : <FiMenu className="w-6 h-6" />}
-            </button>
-
             {/* Overlay */}
             {isOpen && (
                 <div
-                    className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
-                    onClick={() => setIsOpen(false)}
+                    className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-[50]"
+                    onClick={onClose}
                 ></div>
             )}
 
             {/* Sidebar */}
             <div
-                className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+                className={`fixed inset-y-0 left-0 z-[55] w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
                     }`}
             >
                 <div className="h-full flex flex-col">

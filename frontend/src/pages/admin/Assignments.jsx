@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
 import Modal from '../../components/common/Modal';
+import ConfirmationModal from '../../components/common/ConfirmationModal';
 import ErrorAlert from '../../components/common/ErrorAlert';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { FiPlus, FiTrash2, FiEdit2 } from 'react-icons/fi';
@@ -12,12 +13,14 @@ const Assignments = () => {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId, setEditingId] = useState(null);
+    const [editingAssignment, setEditingAssignment] = useState(null);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [assignmentToDelete, setAssignmentToDelete] = useState(null);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [formData, setFormData] = useState({
         employeeId: '',
-        consumerId: '',
-        dailyMilkQuota: '0'
+        consumerId: ''
     });
 
     useEffect(() => {
@@ -29,7 +32,7 @@ const Assignments = () => {
             const [assignmentsRes, employeesRes, consumersRes] = await Promise.all([
                 api.get('/assignments'),
                 api.get('/employees?limit=100'),
-                api.get('/consumers?limit=100')
+                api.get('/consumers?limit=100&isActive=true&unassigned=true')
             ]);
 
             setAssignments(assignmentsRes.data.data);
@@ -57,9 +60,9 @@ const Assignments = () => {
         setEditingId(assignment._id);
         setFormData({
             employeeId: assignment.employeeId._id,
-            consumerId: assignment.consumerId._id,
-            dailyMilkQuota: assignment.dailyMilkQuota.toString()
+            consumerId: assignment.consumerId._id
         });
+        setEditingAssignment(assignment);
         setIsModalOpen(true);
         setError('');
     };
@@ -69,8 +72,7 @@ const Assignments = () => {
         setEditingId(null);
         setFormData({
             employeeId: '',
-            consumerId: '',
-            dailyMilkQuota: '0'
+            consumerId: ''
         });
     };
 
@@ -106,18 +108,24 @@ const Assignments = () => {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this assignment?')) {
-            return;
-        }
+    const handleDeleteClick = (assignment) => {
+        setAssignmentToDelete(assignment);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!assignmentToDelete) return;
 
         try {
-            await api.delete(`/assignments/${id}`);
+            await api.delete(`/assignments/${assignmentToDelete._id}`);
             setSuccess('Assignment deleted successfully');
             fetchData();
             setTimeout(() => setSuccess(''), 3000);
         } catch (error) {
             setError(error.message || 'Delete failed');
+        } finally {
+            setIsDeleteModalOpen(false);
+            setAssignmentToDelete(null);
         }
     };
 
@@ -174,7 +182,53 @@ const Assignments = () => {
                                     {group.employee.mobileNumber} • {group.employee.assignedArea || 'No area assigned'} • {group.assignments.length} consumer(s)
                                 </p>
                             </div>
-                            <div className="table-container">
+
+                            {/* Mobile Card View */}
+                            <div className="md:hidden space-y-3 p-4">
+                                {group.assignments.map((assignment) => (
+                                    <div key={assignment._id} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div>
+                                                <h4 className="font-semibold text-gray-900">
+                                                    {assignment.consumerId.fullName}
+                                                </h4>
+                                                <p className="text-sm text-gray-600">
+                                                    {assignment.consumerId.mobileNumber}
+                                                </p>
+                                            </div>
+                                            <div className="flex space-x-2">
+                                                <button
+                                                    onClick={() => handleEdit(assignment)}
+                                                    className="text-blue-600 hover:text-blue-700 p-2"
+                                                    title="Edit"
+                                                >
+                                                    <FiEdit2 className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteClick(assignment)}
+                                                    className="text-red-600 hover:text-red-700 p-2"
+                                                    title="Delete"
+                                                >
+                                                    <FiTrash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="text-sm space-y-1">
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-500">Area:</span>
+                                                <span className="text-gray-900">{assignment.consumerId.area}</span>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-500">Daily Quota:</span>
+                                                <span className="font-medium text-gray-900">
+                                                    {assignment.consumerId.dailyMilkQuota} L
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="table-container hidden md:block">
                                 <table className="table-auto">
                                     <thead>
                                         <tr>
@@ -191,7 +245,7 @@ const Assignments = () => {
                                                 <td className="font-medium">{assignment.consumerId.fullName}</td>
                                                 <td>{assignment.consumerId.mobileNumber}</td>
                                                 <td>{assignment.consumerId.area}</td>
-                                                <td>{assignment.dailyMilkQuota}</td>
+                                                <td>{assignment.consumerId.dailyMilkQuota} L</td>
                                                 <td>
                                                     <div className="flex justify-center space-x-3">
                                                         <button
@@ -202,7 +256,7 @@ const Assignments = () => {
                                                             <FiEdit2 className="w-5 h-5" />
                                                         </button>
                                                         <button
-                                                            onClick={() => handleDelete(assignment._id)}
+                                                            onClick={() => handleDeleteClick(assignment)}
                                                             className="text-red-600 hover:text-red-700 p-2"
                                                             title="Delete"
                                                         >
@@ -253,37 +307,32 @@ const Assignments = () => {
                         <label className="block text-sm font-medium text-gray-700 mb-2">
                             Consumer *
                         </label>
-                        <select
-                            name="consumerId"
-                            value={formData.consumerId}
-                            onChange={handleChange}
-                            className="input-field"
-                            required
-                            disabled={editingId !== null}
-                        >
-                            <option value="">Select Consumer</option>
-                            {consumers.map((consumer) => (
-                                <option key={consumer._id} value={consumer._id}>
-                                    {consumer.fullName} - {consumer.area}
-                                </option>
-                            ))}
-                        </select>
+                        {editingId ? (
+                            <input
+                                type="text"
+                                value={editingAssignment?.consumerId?.fullName || ''}
+                                className="input-field bg-gray-100"
+                                disabled
+                            />
+                        ) : (
+                            <select
+                                name="consumerId"
+                                value={formData.consumerId}
+                                onChange={handleChange}
+                                className="input-field"
+                                required
+                            >
+                                <option value="">Select Consumer</option>
+                                {consumers.map((consumer) => (
+                                    <option key={consumer._id} value={consumer._id}>
+                                        {consumer.fullName} - {consumer.area}
+                                    </option>
+                                ))}
+                            </select>
+                        )}
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Daily Milk Quota (Liters)
-                        </label>
-                        <input
-                            type="number"
-                            name="dailyMilkQuota"
-                            value={formData.dailyMilkQuota}
-                            onChange={handleChange}
-                            className="input-field"
-                            step="0.5"
-                            min="0"
-                        />
-                    </div>
+
 
                     <div className="flex justify-end space-x-3 pt-4">
                         <button type="button" onClick={handleCloseModal} className="btn-secondary">
@@ -295,6 +344,14 @@ const Assignments = () => {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete Assignment"
+                message={`Are you sure you want to remove the assignment for ${assignmentToDelete?.consumerId?.fullName}? This action cannot be undone.`}
+            />
         </div>
     );
 };

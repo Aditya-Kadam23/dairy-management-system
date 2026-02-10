@@ -3,7 +3,7 @@ import api from '../../utils/api';
 import ErrorAlert from '../../components/common/ErrorAlert';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { FiCheck, FiClock, FiFilter } from 'react-icons/fi';
-import { formatDate } from '../../utils/validators';
+import { formatDateDDMMYYYY } from '../../utils/validators';
 
 const Deliveries = () => {
     const [deliveries, setDeliveries] = useState([]);
@@ -13,14 +13,25 @@ const Deliveries = () => {
     const [selectedEmployee, setSelectedEmployee] = useState('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [refreshSuccess, setRefreshSuccess] = useState('');
 
     useEffect(() => {
         fetchEmployees();
     }, []);
 
     useEffect(() => {
-        fetchDeliveries();
+        const timer = setTimeout(() => {
+            fetchDeliveries();
+        }, 500); // Debounce fetch
+        return () => clearTimeout(timer);
     }, [selectedEmployee, startDate, endDate]);
+
+    const handleRefresh = async () => {
+        setLoading(true);
+        await fetchDeliveries();
+        setRefreshSuccess('✅ Deliveries updated successfully');
+        setTimeout(() => setRefreshSuccess(''), 3000);
+    };
 
     const fetchEmployees = async () => {
         try {
@@ -69,12 +80,23 @@ const Deliveries = () => {
 
     return (
         <div className="space-y-6">
-            <div>
-                <h2 className="text-2xl font-bold text-gray-900">Delivery Tracking</h2>
-                <p className="text-gray-600 mt-1">View all milk deliveries</p>
+            <div className="flex justify-between items-center">
+                <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Delivery Tracking</h2>
+                    <p className="text-gray-600 mt-1">View all milk deliveries</p>
+                </div>
+                <button
+                    onClick={handleRefresh}
+                    className="btn-primary flex items-center"
+                    disabled={loading}
+                >
+                    <FiCheck className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
+                    Refresh
+                </button>
             </div>
 
             {error && <ErrorAlert message={error} type="error" onClose={() => setError('')} />}
+            {refreshSuccess && <ErrorAlert message={refreshSuccess} type="success" onClose={() => setRefreshSuccess('')} />}
 
             {/* Filters */}
             <div className="bg-white rounded-lg shadow-md p-4">
@@ -145,7 +167,7 @@ const Deliveries = () => {
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <h3 className="text-lg font-semibold text-gray-900">
-                                                {formatDate(new Date(date))}
+                                                {formatDateDDMMYYYY(new Date(date))}
                                             </h3>
                                             <p className="text-sm text-gray-600">
                                                 {dayDeliveries.length} deliveries • Total: {totalQuantity.toFixed(2)}L
@@ -157,7 +179,45 @@ const Deliveries = () => {
                                     </div>
                                 </div>
 
-                                <div className="overflow-x-auto">
+                                {/* Mobile Card View */}
+                                <div className="md:hidden space-y-3 p-4">
+                                    {dayDeliveries.map((delivery) => (
+                                        <div key={delivery._id} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <h4 className="font-semibold text-gray-900">
+                                                            {delivery.consumerId.fullName}
+                                                        </h4>
+                                                        <span className="text-xs text-gray-500 bg-white px-1.5 py-0.5 rounded border">
+                                                            {new Date(delivery.createdAt).toLocaleTimeString('en-US', {
+                                                                hour: '2-digit',
+                                                                minute: '2-digit'
+                                                            })}
+                                                        </span>
+                                                    </div>
+                                                    <p className="text-sm text-gray-600">
+                                                        {delivery.consumerId.area}
+                                                    </p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="block font-bold text-lg text-primary-600">
+                                                        {delivery.quantityDelivered}L
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm pt-2 border-t border-gray-200 mt-2">
+                                                <span className="text-gray-500">Delivered by:</span>
+                                                <span className="font-medium text-gray-700">
+                                                    {delivery.employeeId.name}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Desktop Table View */}
+                                <div className="table-container hidden md:block">
                                     <table className="table-auto">
                                         <thead>
                                             <tr>

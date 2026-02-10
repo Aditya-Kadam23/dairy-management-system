@@ -30,6 +30,11 @@ const consumerSchema = new mongoose.Schema({
         required: [true, 'Per liter rate is required'],
         min: [0, 'Rate cannot be negative']
     },
+    dailyMilkQuota: {
+        type: Number,
+        default: 0,
+        min: [0, 'Quota cannot be negative']
+    },
     assignedEmployee: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Employee',

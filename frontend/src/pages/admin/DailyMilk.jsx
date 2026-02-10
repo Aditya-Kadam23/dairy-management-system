@@ -3,7 +3,7 @@ import api from '../../utils/api';
 import Modal from '../../components/common/Modal';
 import ErrorAlert from '../../components/common/ErrorAlert';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { formatDateForInput } from '../../utils/validators';
+import { formatDateForInput, formatDateDDMMYYYY } from '../../utils/validators';
 import { FiClock, FiChevronDown, FiChevronRight, FiCalendar, FiRefreshCw } from 'react-icons/fi';
 
 const DailyMilk = () => {
@@ -25,9 +25,15 @@ const DailyMilk = () => {
         endDate: formatDateForInput(new Date())
     });
 
+    const [allowRemaining, setAllowRemaining] = useState(false);
+
     useEffect(() => {
         fetchEmployees();
     }, []);
+
+    useEffect(() => {
+        loadFromDeliveries();
+    }, [entryDate, employees]); // Reload when date or employees change
 
     const fetchEmployees = async () => {
         try {
@@ -71,26 +77,19 @@ const DailyMilk = () => {
     };
 
     const loadFromDeliveries = async () => {
+        // Silent load or minimal feedback
         try {
-            setLoading(true);
-            setError('');
-            setSuccess('');
-
             // Fetch all deliveries for the selected date
             const response = await api.get('/daily-milk/deliveries', {
                 params: {
                     startDate: entryDate,
                     endDate: entryDate,
-                    limit: 1000 // Get all deliveries for the day
+                    limit: 1000
                 }
             });
 
             const deliveries = response.data.data;
-
-            if (deliveries.length === 0) {
-                setError('No deliveries found for this date. Employees may not have recorded deliveries yet.');
-                return;
-            }
+            if (deliveries.length === 0) return;
 
             // Group deliveries by employee and calculate totals
             const employeeMap = {};
@@ -98,46 +97,30 @@ const DailyMilk = () => {
 
             deliveries.forEach(delivery => {
                 const empId = delivery.employeeId._id;
-                const empName = delivery.employeeId.name;
                 const quantity = delivery.quantityDelivered;
 
                 if (!employeeMap[empId]) {
-                    employeeMap[empId] = {
-                        employeeId: empId,
-                        name: empName,
-                        totalQuantity: 0
-                    };
+                    employeeMap[empId] = { totalQuantity: 0 };
                 }
-
                 employeeMap[empId].totalQuantity += quantity;
                 totalCollected += quantity;
             });
 
-            // Update allocations with calculated values
-            const updatedAllocations = allocations.map(alloc => {
+            // Update allocations
+            setAllocations(prev => prev.map(alloc => {
                 const empData = employeeMap[alloc.employeeId];
-                if (empData) {
-                    return {
-                        ...alloc,
-                        allocatedQuantity: empData.totalQuantity
-                    };
-                }
-                return alloc; // Keep existing allocation (will be 0 if not initialized)
-            });
+                return empData ? { ...alloc, allocatedQuantity: empData.totalQuantity } : alloc;
+            }));
 
-            // Set total milk and allocations
+            // Only set total milk if not already set (or always set it? User logic implies "this is how much admin have to deliver")
+            // Re-reading user request: "daily milk load delivery should not be here as this is how much milk that admin have to deliver"
+            // So we auto-populate the *allocations*, but maybe leave total milk for manual entry or sum it up? 
+            // The prompt says "Fetch on clicking buttons(auto fetch should also be there) and shows update in green".
+            // I'll sum it up for convenience.
             setTotalMilk(totalCollected.toFixed(2));
-            setAllocations(updatedAllocations);
-
-            // Show success message
-            const employeeCount = Object.keys(employeeMap).length;
-            setSuccess(`✅ Loaded ${deliveries.length} deliveries from ${employeeCount} employee(s). Total: ${totalCollected.toFixed(2)}L`);
-            setTimeout(() => setSuccess(''), 5000);
 
         } catch (error) {
-            setError(error.message || 'Failed to load delivery data');
-        } finally {
-            setLoading(false);
+            console.error("Failed to auto-load deliveries:", error);
         }
     };
 
@@ -169,9 +152,17 @@ const DailyMilk = () => {
         const totalAllocated = getTotalAllocated();
         const totalMilkNum = parseFloat(totalMilk);
 
-        if (Math.abs(totalAllocated - totalMilkNum) > 0.01) {
-            setError(`Total allocated (${totalAllocated}L) must match total collected (${totalMilkNum}L)`);
-            return;
+        // Validation logic
+        if (!allowRemaining) {
+            if (Math.abs(totalAllocated - totalMilkNum) > 0.01) {
+                setError(`Total allocated (${totalAllocated}L) must match total collected (${totalMilkNum}L). Enable "Allow Remaining Milk" to bypass.`);
+                return;
+            }
+        } else {
+            if (totalAllocated > totalMilkNum) {
+                setError(`Total allocated (${totalAllocated}L) cannot exceed total collected (${totalMilkNum}L)`);
+                return;
+            }
         }
 
         const employeeAllocations = allocations
@@ -280,6 +271,19 @@ const DailyMilk = () => {
                                             {alloc.name}
                                         </label>
                                     </div>
+
+                                    <div className="flex items-center mb-4">
+                                        <input
+                                            type="checkbox"
+                                            id="allowRemaining"
+                                            checked={allowRemaining}
+                                            onChange={(e) => setAllowRemaining(e.target.checked)}
+                                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                                        />
+                                        <label htmlFor="allowRemaining" className="ml-2 block text-sm text-gray-900">
+                                            Allow remaining milk (mark as complete even if not all milk is allocated)
+                                        </label>
+                                    </div>
                                     <div className="w-40">
                                         <input
                                             type="number"
@@ -300,11 +304,10 @@ const DailyMilk = () => {
                     <div className="flex flex-col sm:flex-row justify-end gap-3">
                         <button
                             type="button"
-                            onClick={loadFromDeliveries}
-                            disabled={loading}
-                            className="btn-secondary disabled:opacity-50 flex items-center justify-center"
+                            onClick={() => { setAllocations(allocations.map(a => ({ ...a, allocatedQuantity: 0 }))); setTotalMilk(''); }}
+                            className="btn-secondary flex items-center justify-center"
                         >
-                            <FiRefreshCw className="mr-2" /> Load from Deliveries
+                            Reset
                         </button>
                         <button
                             type="submit"
@@ -369,69 +372,119 @@ const DailyMilk = () => {
                             No records found for the selected date range
                         </div>
                     ) : (
-                        <div className="table-container">
-                            <table className="table-auto">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Total Milk</th>
-                                        <th>Employees</th>
-                                        <th>Details</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {historyData.map((entry, index) => (
-                                        <React.Fragment key={entry._id}>
-                                            <tr>
-                                                <td className="font-medium">
-                                                    {new Date(entry.entryDate).toLocaleDateString('en-IN')}
-                                                </td>
-                                                <td>{entry.totalMilkCollected}L</td>
-                                                <td>{entry.employeeAllocations?.length || 0}</td>
-                                                <td>
-                                                    <button
-                                                        onClick={() => toggleExpandRow(index)}
-                                                        className="text-primary-600 hover:text-primary-700 p-2"
+                        <>
+                            {/* Mobile Card View */}
+                            <div className="md:hidden space-y-3">
+                                {historyData.map((entry, index) => (
+                                    <div key={entry._id} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <span className="font-medium text-gray-900">
+                                                {formatDateDDMMYYYY(entry.entryDate)}
+                                            </span>
+                                            <span className="text-primary-600 font-bold">
+                                                {entry.totalMilkCollected}L
+                                            </span>
+                                        </div>
+                                        <div className="text-sm text-gray-600 mb-2">
+                                            {entry.employeeAllocations?.length || 0} employees allocated
+                                        </div>
+
+                                        <button
+                                            onClick={() => toggleExpandRow(index)}
+                                            className="w-full text-left text-sm text-blue-600 flex items-center justify-between p-2 bg-white rounded border border-gray-200"
+                                        >
+                                            <span>View Allocations</span>
+                                            {expandedRows.includes(index) ? (
+                                                <FiChevronDown className="w-4 h-4" />
+                                            ) : (
+                                                <FiChevronRight className="w-4 h-4" />
+                                            )}
+                                        </button>
+
+                                        {expandedRows.includes(index) && (
+                                            <div className="mt-2 space-y-2 pl-2 border-l-2 border-blue-100">
+                                                {entry.employeeAllocations?.map((alloc) => (
+                                                    <div
+                                                        key={alloc.employeeId._id}
+                                                        className="flex justify-between text-sm"
                                                     >
-                                                        {expandedRows.includes(index) ? (
-                                                            <FiChevronDown className="w-5 h-5" />
-                                                        ) : (
-                                                            <FiChevronRight className="w-5 h-5" />
-                                                        )}
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                            {expandedRows.includes(index) && (
+                                                        <span className="text-gray-700">
+                                                            {alloc.employeeId.name}
+                                                        </span>
+                                                        <span className="font-medium text-gray-900">
+                                                            {alloc.allocatedQuantity}L
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="table-container hidden md:block">
+                                <table className="table-auto">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Total Milk</th>
+                                            <th>Employees</th>
+                                            <th>Details</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {historyData.map((entry, index) => (
+                                            <React.Fragment key={entry._id}>
                                                 <tr>
-                                                    <td colSpan="4" className="bg-gray-50">
-                                                        <div className="p-4">
-                                                            <h4 className="text-sm font-semibold text-gray-900 mb-2">
-                                                                Employee Allocations:
-                                                            </h4>
-                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                                {entry.employeeAllocations?.map((alloc) => (
-                                                                    <div
-                                                                        key={alloc.employeeId._id}
-                                                                        className="flex justify-between text-sm"
-                                                                    >
-                                                                        <span className="text-gray-700">
-                                                                            {alloc.employeeId.name}
-                                                                        </span>
-                                                                        <span className="font-medium text-gray-900">
-                                                                            {alloc.allocatedQuantity}L
-                                                                        </span>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
+                                                    <td className="font-medium">
+                                                        {formatDateDDMMYYYY(entry.entryDate)}
+                                                    </td>
+                                                    <td>{entry.totalMilkCollected}L</td>
+                                                    <td>{entry.employeeAllocations?.length || 0}</td>
+                                                    <td>
+                                                        <button
+                                                            onClick={() => toggleExpandRow(index)}
+                                                            className="text-primary-600 hover:text-primary-700 p-2"
+                                                        >
+                                                            {expandedRows.includes(index) ? (
+                                                                <FiChevronDown className="w-5 h-5" />
+                                                            ) : (
+                                                                <FiChevronRight className="w-5 h-5" />
+                                                            )}
+                                                        </button>
                                                     </td>
                                                 </tr>
-                                            )}
-                                        </React.Fragment>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                                {expandedRows.includes(index) && (
+                                                    <tr>
+                                                        <td colSpan="4" className="bg-gray-50">
+                                                            <div className="p-4">
+                                                                <h4 className="text-sm font-semibold text-gray-900 mb-2">
+                                                                    Employee Allocations:
+                                                                </h4>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                                    {entry.employeeAllocations?.map((alloc) => (
+                                                                        <div
+                                                                            key={alloc.employeeId._id}
+                                                                            className="flex justify-between text-sm"
+                                                                        >
+                                                                            <span className="text-gray-700">
+                                                                                {alloc.employeeId.name}
+                                                                            </span>
+                                                                            <span className="font-medium text-gray-900">
+                                                                                {alloc.allocatedQuantity}L
+                                                                            </span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
                     )}
                 </div>
             </Modal>

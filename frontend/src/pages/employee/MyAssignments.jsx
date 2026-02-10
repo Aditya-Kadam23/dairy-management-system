@@ -57,9 +57,9 @@ const MyAssignments = () => {
                                     <h3 className="text-lg font-semibold text-gray-900">
                                         {assignment.consumerId.fullName}
                                     </h3>
-                                    {assignment.dailyMilkQuota > 0 && (
+                                    {assignment.consumerId.dailyMilkQuota > 0 && (
                                         <p className="text-sm text-primary-600 font-medium mt-1">
-                                            Daily Quota: {assignment.dailyMilkQuota}L
+                                            Daily Quota: {assignment.consumerId.dailyMilkQuota}L
                                         </p>
                                     )}
                                 </div>

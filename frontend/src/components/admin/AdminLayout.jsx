@@ -1,16 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import Sidebar from './Sidebar';
-import { FiLogOut, FiUser } from 'react-icons/fi';
+import { FiLogOut, FiUser, FiMenu, FiX } from 'react-icons/fi';
 
 const AdminLayout = () => {
     const { user, logout } = useAuth();
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Sidebar */}
-            <Sidebar />
+            <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
 
             {/* Main Content Area */}
             <div className="lg:ml-64 min-h-screen">
@@ -18,7 +19,13 @@ const AdminLayout = () => {
                 <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
                     <div className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
                         <div className="flex items-center justify-between">
-                            <div className="flex-1 min-w-0">
+                            <div className="flex items-center flex-1 min-w-0">
+                                <button
+                                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                                    className="lg:hidden mr-3 p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100 focus:outline-none"
+                                >
+                                    {isSidebarOpen ? <FiX className="w-6 h-6" /> : <FiMenu className="w-6 h-6" />}
+                                </button>
                                 <h1 className="text-xl sm:text-2xl font-semibold text-gray-900 truncate">
                                     Admin Dashboard
                                 </h1>

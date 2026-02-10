@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
 import Modal from '../../components/common/Modal';
+import ConfirmationModal from '../../components/common/ConfirmationModal';
 import ErrorAlert from '../../components/common/ErrorAlert';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { FiPlus, FiEdit2, FiTrash2, FiSearch, FiMessageSquare } from 'react-icons/fi';
@@ -12,6 +13,8 @@ const Consumers = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [selectedConsumer, setSelectedConsumer] = useState(null);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [consumerToDelete, setConsumerToDelete] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -21,7 +24,8 @@ const Consumers = () => {
         mobileNumber: '',
         address: '',
         area: '',
-        perLiterRate: ''
+        perLiterRate: '',
+        dailyMilkQuota: ''
     });
 
     useEffect(() => {
@@ -58,7 +62,8 @@ const Consumers = () => {
                 mobileNumber: consumer.mobileNumber,
                 address: consumer.address,
                 area: consumer.area,
-                perLiterRate: consumer.perLiterRate
+                perLiterRate: consumer.perLiterRate,
+                dailyMilkQuota: consumer.dailyMilkQuota
             });
         } else {
             setEditMode(false);
@@ -68,7 +73,8 @@ const Consumers = () => {
                 mobileNumber: '',
                 address: '',
                 area: '',
-                perLiterRate: defaultRate
+                perLiterRate: defaultRate,
+                dailyMilkQuota: ''
             });
         }
         setIsModalOpen(true);
@@ -84,7 +90,8 @@ const Consumers = () => {
             mobileNumber: '',
             address: '',
             area: '',
-            perLiterRate: ''
+            perLiterRate: '',
+            dailyMilkQuota: ''
         });
     };
 
@@ -137,18 +144,24 @@ const Consumers = () => {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this consumer?')) {
-            return;
-        }
+    const handleDeleteClick = (consumer) => {
+        setConsumerToDelete(consumer);
+        setIsDeleteModalOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!consumerToDelete) return;
 
         try {
-            await api.delete(`/consumers/${id}`);
+            await api.delete(`/consumers/${consumerToDelete._id}`);
             setSuccess('Consumer deleted successfully');
             fetchConsumers();
             setTimeout(() => setSuccess(''), 3000);
         } catch (error) {
             setError(error.message || 'Delete failed');
+        } finally {
+            setIsDeleteModalOpen(false);
+            setConsumerToDelete(null);
         }
     };
 
@@ -195,8 +208,83 @@ const Consumers = () => {
                 </div>
             </div>
 
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4">
+                {filteredConsumers.length === 0 ? (
+                    <div className="bg-white rounded-lg p-8 text-center text-gray-500 shadow-md">
+                        No consumers found
+                    </div>
+                ) : (
+                    filteredConsumers.map((consumer) => (
+                        <div key={consumer._id} className="bg-white rounded-lg shadow-md p-4">
+                            <div className="flex justify-between items-start mb-3">
+                                <div>
+                                    <h3 className="text-lg font-semibold text-gray-900">
+                                        {consumer.fullName}
+                                    </h3>
+                                    <p className="text-sm text-gray-600 mt-1">
+                                        {consumer.mobileNumber}
+                                    </p>
+                                </div>
+                                <div className="flex space-x-2">
+                                    <button
+                                        onClick={() => handleOpenModal(consumer)}
+                                        className="text-blue-600 hover:text-blue-700 p-2"
+                                        title="Edit"
+                                    >
+                                        <FiEdit2 className="w-5 h-5" />
+                                    </button>
+                                    <button
+                                        onClick={() => handleDeleteClick(consumer)}
+                                        className="text-red-600 hover:text-red-700 p-2"
+                                        title="Delete"
+                                    >
+                                        <FiTrash2 className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 text-sm">
+                                <div className="flex justify-between border-b pb-2">
+                                    <span className="text-gray-600">Area</span>
+                                    <span className="font-medium text-gray-900">{consumer.area}</span>
+                                </div>
+                                <div className="flex justify-between border-b pb-2">
+                                    <span className="text-gray-600">Daily Quota</span>
+                                    <span className="font-medium text-gray-900">{consumer.dailyMilkQuota} L</span>
+                                </div>
+                                <div className="flex justify-between border-b pb-2">
+                                    <span className="text-gray-600">Rate</span>
+                                    <span className="font-medium text-gray-900">₹{consumer.perLiterRate}/L</span>
+                                </div>
+                                <div className="pt-2">
+                                    <p className="text-gray-600 mb-1">Assigned Employee:</p>
+                                    {consumer.assignedEmployee ? (
+                                        <div className="bg-gray-50 p-2 rounded">
+                                            <div className="font-medium text-gray-900">
+                                                {consumer.assignedEmployee.name}
+                                            </div>
+                                            <div className="text-gray-500 text-xs">
+                                                {consumer.assignedEmployee.mobileNumber}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <span className="text-gray-400 italic">Not Assigned</span>
+                                    )}
+                                </div>
+                                <div className="pt-1">
+                                    <p className="text-gray-600 mb-1">Address:</p>
+                                    <p className="text-gray-900">{consumer.address}</p>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
             {/* Consumers Table */}
-            <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            <div className="bg-white rounded-lg shadow-md overflow-hidden hidden md:block">
                 <div className="table-container">
                     <table className="table-auto">
                         <thead>
@@ -206,6 +294,7 @@ const Consumers = () => {
                                 <th>Area</th>
                                 <th>Address</th>
                                 <th>Rate (₹/L)</th>
+                                <th>Daily Quota (L)</th>
                                 <th>Assigned Employee</th>
                                 <th>Actions</th>
                             </tr>
@@ -225,6 +314,7 @@ const Consumers = () => {
                                         <td>{consumer.area}</td>
                                         <td className="max-w-xs truncate">{consumer.address}</td>
                                         <td>₹{consumer.perLiterRate}</td>
+                                        <td>{consumer.dailyMilkQuota} L</td>
                                         <td>
                                             {consumer.assignedEmployee ? (
                                                 <span className="text-sm">
@@ -258,7 +348,7 @@ const Consumers = () => {
                                                     <FiEdit2 className="w-5 h-5" />
                                                 </button>
                                                 <button
-                                                    onClick={() => handleDelete(consumer._id)}
+                                                    onClick={() => handleDeleteClick(consumer)}
                                                     className="text-red-600 hover:text-red-700 p-2"
                                                     title="Delete"
                                                 >
@@ -344,6 +434,21 @@ const Consumers = () => {
                                 required
                             />
                         </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Daily Milk Quota (L)
+                            </label>
+                            <input
+                                type="number"
+                                name="dailyMilkQuota"
+                                value={formData.dailyMilkQuota}
+                                onChange={handleChange}
+                                className="input-field"
+                                step="0.5"
+                                min="0"
+                            />
+                        </div>
                     </div>
 
                     <div>
@@ -370,6 +475,14 @@ const Consumers = () => {
                     </div>
                 </form>
             </Modal>
+
+            <ConfirmationModal
+                isOpen={isDeleteModalOpen}
+                onClose={() => setIsDeleteModalOpen(false)}
+                onConfirm={handleConfirmDelete}
+                title="Delete Consumer"
+                message={`Are you sure you want to delete ${consumerToDelete?.fullName}? This action cannot be undone.`}
+            />
         </div>
     );
 };

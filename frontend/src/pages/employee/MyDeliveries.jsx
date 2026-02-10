@@ -128,7 +128,7 @@ const DeliveryCard = ({ assignment, completed, onMarkDelivery, submitting }) => 
     const [isExpanded, setIsExpanded] = useState(false);
 
     const consumer = assignment.consumerId;
-    const defaultQuota = assignment.dailyMilkQuota || 0;
+    const defaultQuota = assignment.consumerId.dailyMilkQuota || 0;
     const totalQuantity = parseFloat(defaultQuota) + parseFloat(extraQuantity || 0);
 
     return (

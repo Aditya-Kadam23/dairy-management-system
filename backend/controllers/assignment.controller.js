@@ -7,7 +7,7 @@ const Employee = require('../models/Employee');
 // @access  Private/Admin
 exports.createAssignment = async (req, res, next) => {
     try {
-        const { employeeId, consumerId, dailyMilkQuota } = req.body;
+        const { employeeId, consumerId } = req.body;
 
         // Verify employee exists
         const employee = await Employee.findById(employeeId);
@@ -43,8 +43,7 @@ exports.createAssignment = async (req, res, next) => {
 
         const assignment = await ConsumerAssignment.create({
             employeeId,
-            consumerId,
-            dailyMilkQuota: dailyMilkQuota || 0
+            consumerId
         });
 
         // Update consumer's assignedEmployee field
