@@ -6,7 +6,7 @@ const Consumer = require('../models/Consumer');
 // @access  Private/Admin
 exports.getConsumerMonthlyBilling = async (req, res, next) => {
     try {
-        const { year, month } = req.query;
+        const { year, month, startDate: queryStartDate, endDate: queryEndDate } = req.query;
         const { id: consumerId } = req.params;
 
         // Get consumer
@@ -18,12 +18,22 @@ exports.getConsumerMonthlyBilling = async (req, res, next) => {
             });
         }
 
-        // Calculate date range for the month
-        const targetYear = year ? parseInt(year) : new Date().getFullYear();
-        const targetMonth = month ? parseInt(month) - 1 : new Date().getMonth();
+        let startDate, endDate, targetMonth, targetYear;
 
-        const startDate = new Date(targetYear, targetMonth, 1);
-        const endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59);
+        if (queryStartDate && queryEndDate) {
+            startDate = new Date(queryStartDate);
+            endDate = new Date(queryEndDate);
+            // Set time to end of day for endDate
+            endDate.setHours(23, 59, 59, 999);
+            targetMonth = startDate.getMonth();
+            targetYear = startDate.getFullYear();
+        } else {
+            // Calculate date range for the month
+            targetYear = year ? parseInt(year) : new Date().getFullYear();
+            targetMonth = month ? parseInt(month) - 1 : new Date().getMonth();
+            startDate = new Date(targetYear, targetMonth, 1);
+            endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59);
+        }
 
         // Get all deliveries for this consumer in the month
         const deliveries = await DailyDelivery.find({
@@ -74,14 +84,25 @@ exports.getConsumerMonthlyBilling = async (req, res, next) => {
 // @access  Private/Admin
 exports.getMonthlyBillingReport = async (req, res, next) => {
     try {
-        const { year, month } = req.query;
+        const { year, month, startDate: queryStartDate, endDate: queryEndDate } = req.query;
 
-        // Calculate date range
-        const targetYear = year ? parseInt(year) : new Date().getFullYear();
-        const targetMonth = month ? parseInt(month) - 1 : new Date().getMonth();
+        let startDate, endDate, targetMonth, targetYear;
 
-        const startDate = new Date(targetYear, targetMonth, 1);
-        const endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59);
+        if (queryStartDate && queryEndDate) {
+            startDate = new Date(queryStartDate);
+            endDate = new Date(queryEndDate);
+            // Set time to end of day for endDate
+            endDate.setHours(23, 59, 59, 999);
+            targetMonth = startDate.getMonth();
+            targetYear = startDate.getFullYear();
+        } else {
+            // Calculate date range
+            targetYear = year ? parseInt(year) : new Date().getFullYear();
+            targetMonth = month ? parseInt(month) - 1 : new Date().getMonth();
+
+            startDate = new Date(targetYear, targetMonth, 1);
+            endDate = new Date(targetYear, targetMonth + 1, 0, 23, 59, 59);
+        }
 
         // Get all deliveries for the month
         const deliveries = await DailyDelivery.find({

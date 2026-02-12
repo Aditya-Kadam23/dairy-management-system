@@ -2,30 +2,126 @@ import React, { useState, useEffect } from 'react';
 import api from '../../utils/api';
 import ErrorAlert from '../../components/common/ErrorAlert';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { formatCurrency, generateWhatsAppLink } from '../../utils/validators';
-import { FiMessageSquare, FiDownload } from 'react-icons/fi';
+import { formatCurrency, generateWhatsAppLink, formatDateDDMMYYYY } from '../../utils/validators';
+import { FiMessageSquare, FiDownload, FiCalendar, FiFilter } from 'react-icons/fi';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const Billing = () => {
     const [report, setReport] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [filterType, setFilterType] = useState('month'); // 'month' or 'range'
     const [month, setMonth] = useState(new Date().getMonth() + 1);
     const [year, setYear] = useState(new Date().getFullYear());
+    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
 
     useEffect(() => {
-        fetchReport();
-    }, [month, year]);
+        if (filterType === 'month') {
+            fetchReport();
+        }
+    }, [month, year, filterType]);
+
+    // For range, we manually trigger fetch
+    const handleRangeFetch = () => {
+        if (filterType === 'range') {
+            fetchReport();
+        }
+    };
 
     const fetchReport = async () => {
         try {
             setLoading(true);
-            const response = await api.get(`/billing/report?month=${month}&year=${year}`);
+            let query = `/billing/report?`;
+
+            if (filterType === 'month') {
+                query += `month=${month}&year=${year}`;
+            } else {
+                query += `startDate=${startDate}&endDate=${endDate}`;
+            }
+
+            const response = await api.get(query);
             setReport(response.data.data);
             setLoading(false);
         } catch (error) {
             setError(error.message || 'Failed to fetch billing report');
             setLoading(false);
         }
+    };
+
+    const downloadBill = (consumer, totalQuantity, totalAmount) => {
+        const doc = new jsPDF();
+
+        // Title
+        doc.setFontSize(20);
+        doc.setTextColor(41, 128, 185); // Blue color
+        doc.text('Milk Bill Invoice', 105, 20, { align: 'center' });
+
+        // Bill Details
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        let periodStr = '';
+        if (filterType === 'month') {
+            periodStr = `${getMonthName(month)} ${year}`;
+        } else {
+            periodStr = `${formatDateDDMMYYYY(new Date(startDate))} to ${formatDateDDMMYYYY(new Date(endDate))}`;
+        }
+
+        // Left Side: Consumer Info
+        doc.setFontSize(12);
+        doc.setTextColor(0);
+        doc.text(`Bill To:`, 14, 40);
+        doc.setFontSize(11);
+        doc.setTextColor(60);
+        doc.text(consumer.fullName, 14, 48);
+        doc.text(consumer.mobileNumber, 14, 54);
+        doc.text(consumer.area, 14, 60);
+
+        // Right Side: Invoice Info
+        doc.setFontSize(12);
+        doc.setTextColor(0);
+        doc.text(`Invoice Details:`, 140, 40);
+        doc.setFontSize(11);
+        doc.setTextColor(60);
+        doc.text(`Date: ${formatDateDDMMYYYY(new Date())}`, 140, 48);
+        doc.text(`Period: ${periodStr}`, 140, 54);
+
+        // Table
+        const tableColumn = ["Description", "Quantity (L)", "Rate (Rs/L)", "Amount (Rs)"];
+        const tableRows = [
+            [
+                "Milk Supply",
+                totalQuantity.toFixed(2),
+                consumer.perLiterRate,
+                formatCurrency(totalAmount).replace('₹', '')
+            ]
+        ];
+
+        autoTable(doc, {
+            head: tableColumn,
+            body: tableRows,
+            startY: 70,
+            theme: 'grid',
+            headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+            styles: { fontSize: 10, cellPadding: 3 },
+        });
+
+        const finalY = (doc).lastAutoTable.finalY + 10;
+
+        // Total
+        doc.setFontSize(14);
+        doc.setTextColor(0);
+        doc.text(`Total Amount: ${formatCurrency(totalAmount)}`, 140, finalY);
+
+        // Footer
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text('Thank you for your business!', 105, finalY + 20, { align: 'center' });
+
+        // Save
+        const fileName = `Bill-${consumer.fullName.replace(/\s+/g, '_')}-${periodStr.replace(/ /g, '_')}.pdf`;
+        doc.save(fileName);
     };
 
     const sendBillingMessage = (consumer, totalQuantity, totalAmount) => {
@@ -59,45 +155,96 @@ const Billing = () => {
 
             {error && <ErrorAlert message={error} type="error" onClose={() => setError('')} />}
 
-            {/* Month/Year Selector */}
+            {/* Filters */}
             <div className="bg-white rounded-lg shadow-md p-4">
+                {/* Filter Type Toggle */}
+                <div className="flex space-x-4 mb-4 border-b pb-4">
+                    <label className="flex items-center cursor-pointer">
+                        <input
+                            type="radio"
+                            name="filterType"
+                            value="month"
+                            checked={filterType === 'month'}
+                            onChange={() => setFilterType('month')}
+                            className="form-radio text-primary-600"
+                        />
+                        <span className="ml-2 text-gray-700">Monthly View</span>
+                    </label>
+                    <label className="flex items-center cursor-pointer">
+                        <input
+                            type="radio"
+                            name="filterType"
+                            value="range"
+                            checked={filterType === 'range'}
+                            onChange={() => setFilterType('range')}
+                            className="form-radio text-primary-600"
+                        />
+                        <span className="ml-2 text-gray-700">Custom Date Range</span>
+                    </label>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Month
-                        </label>
-                        <select
-                            value={month}
-                            onChange={(e) => setMonth(parseInt(e.target.value))}
-                            className="input-field"
-                        >
-                            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                                <option key={m} value={m}>{getMonthName(m)}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Year
-                        </label>
-                        <select
-                            value={year}
-                            onChange={(e) => setYear(parseInt(e.target.value))}
-                            className="input-field"
-                        >
-                            {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(y => (
-                                <option key={y} value={y}>{y}</option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <button
-                        onClick={fetchReport}
-                        className="btn-primary flex items-center justify-center"
-                    >
-                        <FiDownload className="mr-2" /> Generate Report
-                    </button>
+                    {filterType === 'month' ? (
+                        <>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Month</label>
+                                <select
+                                    value={month}
+                                    onChange={(e) => setMonth(parseInt(e.target.value))}
+                                    className="input-field"
+                                >
+                                    {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                                        <option key={m} value={m}>{getMonthName(m)}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Year</label>
+                                <select
+                                    value={year}
+                                    onChange={(e) => setYear(parseInt(e.target.value))}
+                                    className="input-field"
+                                >
+                                    {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i).map(y => (
+                                        <option key={y} value={y}>{y}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <button
+                                onClick={fetchReport}
+                                className="btn-primary flex items-center justify-center opacity-0 pointer-events-none"
+                            >
+                                <FiFilter className="mr-2" /> Refresh
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => setStartDate(e.target.value)}
+                                    className="input-field"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    className="input-field"
+                                />
+                            </div>
+                            <button
+                                onClick={handleRangeFetch}
+                                className="btn-primary flex items-center justify-center"
+                            >
+                                <FiFilter className="mr-2" /> Generate Report
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -163,6 +310,12 @@ const Billing = () => {
                                 >
                                     <FiMessageSquare className="mr-2" /> Send Bill via WhatsApp
                                 </button>
+                                <button
+                                    onClick={() => downloadBill(item.consumer, item.totalQuantity, item.totalAmount)}
+                                    className="w-full btn-secondary flex items-center justify-center py-2 mt-2"
+                                >
+                                    <FiDownload className="mr-2" /> Download PDF
+                                </button>
                             </div>
                         ))}
                     </div>
@@ -199,6 +352,14 @@ const Billing = () => {
                                             >
                                                 <FiMessageSquare className="w-5 h-5 mr-1" />
                                                 Send Bill
+                                            </button>
+                                            <button
+                                                onClick={() => downloadBill(item.consumer, item.totalQuantity, item.totalAmount)}
+                                                className="text-blue-600 hover:text-blue-700 flex items-center mt-1"
+                                                title="Download PDF Bill"
+                                            >
+                                                <FiDownload className="w-5 h-5 mr-1" />
+                                                PDF
                                             </button>
                                         </td>
                                     </tr>

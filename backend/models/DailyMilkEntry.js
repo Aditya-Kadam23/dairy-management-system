@@ -32,6 +32,13 @@ const dailyMilkEntrySchema = new mongoose.Schema({
             default: function () {
                 return this.allocatedQuantity;
             }
+        },
+        isVerified: {
+            type: Boolean,
+            default: false
+        },
+        verifiedAt: {
+            type: Date
         }
     }],
     createdAt: {

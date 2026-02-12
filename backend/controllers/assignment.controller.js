@@ -54,7 +54,7 @@ exports.createAssignment = async (req, res, next) => {
         // Populate for response
         const populatedAssignment = await ConsumerAssignment.findById(assignment._id)
             .populate('employeeId', 'name mobileNumber')
-            .populate('consumerId', 'fullName mobileNumber area');
+            .populate('consumerId', 'fullName mobileNumber area dailyMilkQuota');
 
         res.status(201).json({
             success: true,
@@ -81,7 +81,7 @@ exports.getAssignments = async (req, res, next) => {
 
         const assignments = await ConsumerAssignment.find(query)
             .populate('employeeId', 'name mobileNumber assignedArea')
-            .populate('consumerId', 'fullName mobileNumber area address perLiterRate')
+            .populate('consumerId', 'fullName mobileNumber area address perLiterRate dailyMilkQuota')
             .sort({ assignedDate: -1 });
 
         res.status(200).json({
@@ -104,7 +104,7 @@ exports.getMyAssignments = async (req, res, next) => {
             employeeId: req.user._id,
             isActive: true
         })
-            .populate('consumerId', 'fullName mobileNumber area address')
+            .populate('consumerId', 'fullName mobileNumber area address dailyMilkQuota')
             .sort({ assignedDate: -1 });
 
         res.status(200).json({
@@ -132,7 +132,7 @@ exports.updateAssignment = async (req, res, next) => {
             }
         )
             .populate('employeeId', 'name mobileNumber')
-            .populate('consumerId', 'fullName mobileNumber area');
+            .populate('consumerId', 'fullName mobileNumber area dailyMilkQuota');
 
         if (!assignment) {
             return res.status(404).json({

@@ -3,6 +3,7 @@ const DailyDelivery = require('../models/DailyDelivery');
 const Employee = require('../models/Employee');
 const Consumer = require('../models/Consumer');
 const ConsumerAssignment = require('../models/ConsumerAssignment');
+const mongoose = require('mongoose');
 
 // @desc    Create daily milk entry
 // @route   POST /api/daily-milk
@@ -296,6 +297,49 @@ exports.getMyDailyQuota = async (req, res, next) => {
                 deliveredQuantity: empAllocation.deliveredQuantity,
                 remainingQuantity: empAllocation.remainingQuantity
             }
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+// @desc    Verify employee daily entry (Admin confirms return)
+// @route   PUT /api/daily-milk/verify/:date/:employeeId
+// @access  Private/Admin
+exports.verifyEmployeeDailyEntry = async (req, res, next) => {
+    try {
+        const { date, employeeId } = req.params;
+
+        const entry = await DailyMilkEntry.findOne({ entryDate: date });
+
+        if (!entry) {
+            return res.status(404).json({
+                success: false,
+                message: 'No entry found for this date'
+            });
+        }
+
+        const allocationIndex = entry.employeeAllocations.findIndex(
+            alloc => alloc.employeeId.toString() === employeeId
+        );
+
+        if (allocationIndex === -1) {
+            return res.status(404).json({
+                success: false,
+                message: 'Employee not allocated for this date'
+            });
+        }
+
+        // Update verification status
+        entry.employeeAllocations[allocationIndex].isVerified = true;
+        entry.employeeAllocations[allocationIndex].verifiedAt = Date.now();
+
+        await entry.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Employee day verified successfully',
+            data: entry.employeeAllocations[allocationIndex]
         });
 
     } catch (error) {

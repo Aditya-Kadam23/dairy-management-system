@@ -247,7 +247,7 @@ const DailyMilk = () => {
                         </h3>
 
                         <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                            <div className="flex justify-between items-center">
+                            <div className="flex justify-between items-center mb-2">
                                 <span className="text-sm font-medium text-gray-700">Total Allocated:</span>
                                 <span className={`text-lg font-bold ${getTotalAllocated() === parseFloat(totalMilk || 0)
                                     ? 'text-green-600'
@@ -256,11 +256,27 @@ const DailyMilk = () => {
                                     {getTotalAllocated().toFixed(2)} L
                                 </span>
                             </div>
-                            {totalMilk && (
-                                <div className="mt-2 text-sm text-gray-600">
-                                    Remaining: {(parseFloat(totalMilk) - getTotalAllocated()).toFixed(2)} L
+
+                            <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                                <div className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        id="allowRemaining"
+                                        checked={allowRemaining}
+                                        onChange={(e) => setAllowRemaining(e.target.checked)}
+                                        className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded cursor-pointer"
+                                    />
+                                    <label htmlFor="allowRemaining" className="ml-2 block text-sm text-gray-900 cursor-pointer">
+                                        Allow remaining milk
+                                    </label>
                                 </div>
-                            )}
+
+                                {allowRemaining && totalMilk && (
+                                    <div className="text-sm font-medium text-blue-600">
+                                        Remaining: {(parseFloat(totalMilk) - getTotalAllocated()).toFixed(2)} L
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         <div className="space-y-3">
@@ -272,18 +288,7 @@ const DailyMilk = () => {
                                         </label>
                                     </div>
 
-                                    <div className="flex items-center mb-4">
-                                        <input
-                                            type="checkbox"
-                                            id="allowRemaining"
-                                            checked={allowRemaining}
-                                            onChange={(e) => setAllowRemaining(e.target.checked)}
-                                            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                                        />
-                                        <label htmlFor="allowRemaining" className="ml-2 block text-sm text-gray-900">
-                                            Allow remaining milk (mark as complete even if not all milk is allocated)
-                                        </label>
-                                    </div>
+
                                     <div className="w-40">
                                         <input
                                             type="number"

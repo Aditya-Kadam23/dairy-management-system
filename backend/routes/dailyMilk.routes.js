@@ -5,7 +5,9 @@ const {
     getDailyMilkEntryByDate,
     recordDelivery,
     getDeliveries,
-    getMyDailyQuota
+    getDeliveries,
+    getMyDailyQuota,
+    verifyEmployeeDailyEntry
 } = require('../controllers/dailyMilk.controller');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -24,6 +26,8 @@ router.use(authorize('admin'));
 
 router.route('/').get(getDailyMilkEntries).post(createDailyMilkEntry);
 router.route('/date/:date').get(getDailyMilkEntryByDate);
+router.route('/date/:date').get(getDailyMilkEntryByDate);
 router.post('/delivery', recordDelivery); // Admin can record any delivery
+router.put('/verify/:date/:employeeId', verifyEmployeeDailyEntry);
 
 module.exports = router;
