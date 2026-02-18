@@ -5,7 +5,6 @@ const {
     getDailyMilkEntryByDate,
     recordDelivery,
     getDeliveries,
-    getDeliveries,
     getMyDailyQuota,
     verifyEmployeeDailyEntry
 } = require('../controllers/dailyMilk.controller');

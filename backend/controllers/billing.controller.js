@@ -116,6 +116,7 @@ exports.getMonthlyBillingReport = async (req, res, next) => {
         const consumerMap = {};
 
         deliveries.forEach(delivery => {
+            if (!delivery.consumerId) return; // Skip if consumer not found
             const consumerId = delivery.consumerId._id.toString();
 
             if (!consumerMap[consumerId]) {
