@@ -32,8 +32,10 @@ const DailyMilk = () => {
     }, []);
 
     useEffect(() => {
-        loadFromDeliveries();
-    }, [entryDate, employees]); // Reload when date or employees change
+        if (employees.length > 0) {
+            loadFromAssignments();
+        }
+    }, [employees]); // Reload when employees are loaded
 
     const fetchEmployees = async () => {
         try {
@@ -76,51 +78,38 @@ const DailyMilk = () => {
         fetchHistory();
     };
 
-    const loadFromDeliveries = async () => {
-        // Silent load or minimal feedback
+    const loadFromAssignments = async () => {
         try {
-            // Fetch all deliveries for the selected date
-            const response = await api.get('/daily-milk/deliveries', {
-                params: {
-                    startDate: entryDate,
-                    endDate: entryDate,
-                    limit: 1000
-                }
-            });
+            // Fetch all active assignments
+            const response = await api.get('/assignments?isActive=true');
+            const assignments = response.data.data;
 
-            const deliveries = response.data.data;
-            if (deliveries.length === 0) return;
+            if (!assignments || assignments.length === 0) return;
 
-            // Group deliveries by employee and calculate totals
+            // Group by employee and sum daily quotas
             const employeeMap = {};
-            let totalCollected = 0;
 
-            deliveries.forEach(delivery => {
-                const empId = delivery.employeeId._id;
-                const quantity = delivery.quantityDelivered;
+            assignments.forEach(assignment => {
+                const empId = assignment.employeeId?._id;
+                const quota = assignment.consumerId?.dailyMilkQuota || 0;
 
-                if (!employeeMap[empId]) {
-                    employeeMap[empId] = { totalQuantity: 0 };
+                if (empId) {
+                    if (!employeeMap[empId]) {
+                        employeeMap[empId] = 0;
+                    }
+                    employeeMap[empId] += quota;
                 }
-                employeeMap[empId].totalQuantity += quantity;
-                totalCollected += quantity;
             });
 
-            // Update allocations
+            // Update allocations with calculated quotas
             setAllocations(prev => prev.map(alloc => {
-                const empData = employeeMap[alloc.employeeId];
-                return empData ? { ...alloc, allocatedQuantity: empData.totalQuantity } : alloc;
+                const calculatedQuota = employeeMap[alloc.employeeId] || 0;
+                return { ...alloc, allocatedQuantity: calculatedQuota };
             }));
 
-            // Only set total milk if not already set (or always set it? User logic implies "this is how much admin have to deliver")
-            // Re-reading user request: "daily milk load delivery should not be here as this is how much milk that admin have to deliver"
-            // So we auto-populate the *allocations*, but maybe leave total milk for manual entry or sum it up? 
-            // The prompt says "Fetch on clicking buttons(auto fetch should also be there) and shows update in green".
-            // I'll sum it up for convenience.
-            setTotalMilk(totalCollected.toFixed(2));
-
         } catch (error) {
-            console.error("Failed to auto-load deliveries:", error);
+            console.error("Failed to load assignments:", error);
+            setError('Failed to load employee assignments');
         }
     };
 

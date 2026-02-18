@@ -32,7 +32,7 @@ const Employees = () => {
     const fetchEmployees = async () => {
         try {
             const response = await api.get('/employees?limit=100');
-            setEmployees(response.data.data);
+            setEmployees(response.data.data || []);
             setLoading(false);
         } catch (error) {
             setError(error.message || 'Failed to fetch employees');
@@ -137,8 +137,10 @@ const Employees = () => {
     };
 
     const filteredEmployees = employees.filter(employee =>
-        employee.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        employee.mobileNumber.includes(searchTerm)
+        employee && (
+            (employee.name && employee.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (employee.mobileNumber && employee.mobileNumber.includes(searchTerm))
+        )
     );
 
     if (loading) {

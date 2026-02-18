@@ -132,6 +132,9 @@ const Assignments = () => {
     // Group assignments by employee
     const employeeGroups = {};
     assignments.forEach(assignment => {
+        // Skip invalid assignments
+        if (!assignment || !assignment.employeeId || !assignment.consumerId) return;
+
         const empId = assignment.employeeId._id;
         if (!employeeGroups[empId]) {
             employeeGroups[empId] = {
@@ -216,12 +219,12 @@ const Assignments = () => {
                                         <div className="text-sm space-y-1">
                                             <div className="flex justify-between">
                                                 <span className="text-gray-500">Area:</span>
-                                                <span className="text-gray-900">{assignment.consumerId.area}</span>
+                                                <span className="text-gray-900">{assignment.consumerId?.area}</span>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span className="text-gray-500">Daily Quota:</span>
                                                 <span className="font-medium text-gray-900">
-                                                    {assignment.consumerId.dailyMilkQuota} L
+                                                    {assignment.consumerId?.dailyMilkQuota} L
                                                 </span>
                                             </div>
                                         </div>
@@ -242,10 +245,10 @@ const Assignments = () => {
                                     <tbody>
                                         {group.assignments.map((assignment) => (
                                             <tr key={assignment._id}>
-                                                <td className="font-medium">{assignment.consumerId.fullName}</td>
-                                                <td>{assignment.consumerId.mobileNumber}</td>
-                                                <td>{assignment.consumerId.area}</td>
-                                                <td>{assignment.consumerId.dailyMilkQuota} L</td>
+                                                <td className="font-medium">{assignment.consumerId?.fullName}</td>
+                                                <td>{assignment.consumerId?.mobileNumber}</td>
+                                                <td>{assignment.consumerId?.area}</td>
+                                                <td>{assignment.consumerId?.dailyMilkQuota} L</td>
                                                 <td>
                                                     <div className="flex justify-center space-x-3">
                                                         <button
