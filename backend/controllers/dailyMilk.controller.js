@@ -24,10 +24,10 @@ exports.createDailyMilkEntry = async (req, res, next) => {
         // Validate total allocation matches total collected
         const totalAllocated = employeeAllocations.reduce((sum, alloc) => sum + alloc.allocatedQuantity, 0);
 
-        if (Math.abs(totalAllocated - totalMilkCollected) > 0.01) {
+        if (totalAllocated > totalMilkCollected) {
             return res.status(400).json({
                 success: false,
-                message: `Total allocated (${totalAllocated}L) must match total collected (${totalMilkCollected}L)`
+                message: `Total allocated (${totalAllocated}L) cannot exceed total collected (${totalMilkCollected}L)`
             });
         }
 
